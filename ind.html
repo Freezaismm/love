@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Nadine's Constellation Journey</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-space: #050011;
+            --color-star: #ffd700;
+            --color-infinity: #00f5d4;
+            --color-heart: #ff007f;
+            --text-glow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+
+        * { box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            margin: 0;
+            background-color: var(--bg-space);
+            font-family: 'Press Start 2P', cursive;
+            color: white;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* --- CRT EFFECT --- */
+        .scanlines {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0.2));
+            background-size: 100% 4px;
+            pointer-events: none;
+            z-index: 100;
+        }
+        .glow-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle at center, transparent 50%, #000 120%);
+            pointer-events: none;
+            z-index: 99;
+        }
+
+        /* --- CONTAINER --- */
+        .game-console {
+            position: relative;
+            width: 100%;
+            max-width: 450px;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* --- SCREENS --- */
+        .screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            transition: opacity 0.5s;
+            z-index: 10;
+            background: var(--bg-space);
+        }
+        .hidden { opacity: 0; pointer-events: none; z-index: -1; }
+
+        /* --- BACKGROUND ANIMATION --- */
+        .stars-bg {
+            position: absolute; top: 0; left: 0; width: 100%; height: 200%;
+            background-image: 
+                radial-gradient(white 1px, transparent 1px),
+                radial-gradient(rgba(255,255,255,0.5) 2px, transparent 2px);
+            background-size: 70px 70px, 150px 150px;
+            animation: spaceTravel 40s linear infinite;
+            opacity: 0.4;
+        }
+        @keyframes spaceTravel { from { transform: translateY(0); } to { transform: translateY(-50%); } }
+
+        /* --- UI ELEMENTS --- */
+        .photo-frame {
+            width: 140px; height: 140px;
+            border: 4px solid white;
+            box-shadow: 0 0 20px rgba(255,255,255,0.5);
+            margin-bottom: 20px;
+            padding: 5px;
+            background: rgba(255,255,255,0.1);
+        }
+        .photo-frame img { width: 100%; height: 100%; object-fit: cover; filter: brightness(1.1) contrast(1.1); }
+
+        h1 {
+            font-size: 1.2rem; text-align: center; line-height: 1.6;
+            margin-bottom: 10px; color: #fff;
+            text-shadow: 2px 2px 0px #333;
+        }
+        
+        .level-badge {
+            font-size: 0.7rem; color: #ffd700; margin-bottom: 20px;
+            border: 1px solid #ffd700; padding: 5px 10px;
+            text-transform: uppercase; letter-spacing: 2px;
+        }
+
+        .btn {
+            margin-top: 30px;
+            background: transparent; border: 2px solid white; color: white;
+            padding: 15px 30px; font-family: inherit; font-size: 0.8rem;
+            cursor: pointer; box-shadow: 4px 4px 0 rgba(255,255,255,0.3);
+            transition: all 0.1s;
+        }
+        .btn:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 rgba(255,255,255,0.3); }
+
+        /* --- GAME HUD --- */
+        .hud {
+            position: absolute; top: 20px; left: 0; width: 100%;
+            display: flex; justify-content: space-between; padding: 0 20px;
+            font-size: 0.7rem; z-index: 20;
+            text-shadow: 0 0 5px black;
+        }
+
+        #gameCanvas {
+            z-index: 5;
+            cursor: crosshair;
+        }
+
+        /* --- LEVEL UP OVERLAY --- */
+        .level-up-msg {
+            position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.9);
+            border: 2px solid white;
+            padding: 20px; text-align: center;
+            display: none; z-index: 50;
+            width: 80%;
+        }
+        .level-up-msg.show { display: block; animation: popIn 0.3s; }
+        @keyframes popIn { from{transform: translate(-50%, -40%) scale(0.8); opacity: 0;} to{transform: translate(-50%, -50%) scale(1); opacity: 1;} }
+
+        /* --- LONG TEXT --- */
+        .letter-box {
+            width: 85%; height: 40vh;
+            background: rgba(0,0,0,0.6);
+            border: 1px dashed var(--color-heart);
+            padding: 15px;
+            font-size: 0.7rem; line-height: 1.8;
+            color: #ffccdd;
+            overflow-y: auto;
+            text-shadow: 0 0 2px var(--color-heart);
+            margin-bottom: 15px;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="scanlines"></div>
+    <div class="glow-overlay"></div>
+
+    <div class="game-console">
+        <div class="stars-bg"></div>
+
+        <div id="screen-start" class="screen">
+            <div class="photo-frame" style="border-color: var(--color-star);">
+                <img src="https://img.sanishtech.com/u/061d1b6c0d07f56e13b5822335f7289d.png" alt="Start">
+            </div>
+            <h1>NADINE'S<br>JOURNEY</h1>
+            <p style="font-size: 0.6rem; color: #aaa; margin-bottom: 20px;">perjalanan untuk jadi yang terbaik di hati fathannn</p>
+            <button class="btn" onclick="startGame()">START MISSION</button>
+        </div>
+
+        <div id="screen-game" class="screen hidden">
+            <div class="hud">
+                <span id="level-indicator">LEVEL 1/3</span>
+                <span>TARGET: <span id="target-counter">1</span></span>
+            </div>
+            <canvas id="gameCanvas"></canvas>
+            
+            <div id="msg-overlay" class="level-up-msg">
+                <h2 id="msg-title" style="color: #ffd700; font-size: 1rem; margin-bottom: 10px;">LEVEL COMPLETE</h2>
+                <p id="msg-desc" style="font-size: 0.6rem; line-height: 1.5; color: #fff;">Good Job!</p>
+                <button class="btn" onclick="nextLevel()" style="margin-top: 15px; padding: 10px 20px;">NEXT</button>
+            </div>
+        </div>
+
+        <div id="screen-win" class="screen hidden">
+            <div class="level-badge">MISSION ACCOMPLISHED</div>
+            <div class="photo-frame" style="border-color: var(--color-heart); width: 100px; height: 100px;">
+                <img src="https://img.sanishtech.com/u/80aeb82f1687a24564a010365c8f387b.png" alt="End">
+            </div>
+            <div class="letter-box" id="typewriter"></div>
+            <button class="btn" onclick="location.reload()">REPLAY MEMORY</button>
+        </div>
+    </div>
+
+    <script>
+        // --- KONFIGURASI SURAT CINTA ---
+        const finalMessage = `wihh another game lagii yaakk wkwkwkwkwk, yaaa kali ini gamenya agaa simplee biar kamu gampang maininnyaa yaakk wkwkwkkw, ya aslinya karena gaada ide sii wkwkwkw.. tapi gapaapaaa semogaa kamu sukaa yaa samaa isinyaaa ekwkwkwk, dann bisa jadi penambah mutmu walaupun enggaa berangkat sekolaaaa..\n\n yaaa terimakasihh yakk udaa kuat harii iniii, wahh bener bener belum kelar malah jadi kemana manaa yaaa.. aku gatau besok akan se chaos apa di sekolahh, dan kamu udaa bener nadineee.. ga berangkattt ke sekolaahh, kayanya emang lagi se chaoss itu ntarr.. anywayy makasii taa hari inii udaa nemenin aku buat main minecraftt sehariaannn, wahh progressnyaa buanyak bangett yaaa dapet hasil mining, terus farmnya gedee dan lain sebagainyaa dehh.. timakasii banyak banyakk yaa nadineee.. alhamdulillah gara gara ku ajak main jugaa mungkin kamu lebih tenanggg yaaaaa... semogaa iyaa deehhh wkwkwkwk, yaa aku tetep sedihh sih nadinee kenapa semuaa terjadi seperti inii.. dan kamu yang kenaa, huhhh sangat melelahkan sekali yaa duniaaa.. yaaa seperti yang fathan bilang tadii mendingan kamu menjadi seeprti kelas 10 daripada harus menghadapi orang yang seperti ituu selama dua tahunn, gapapaa deh semisal kamu ga bertemu aku, tapii yang penting kamu bahagiaa di hidupmuy dengan banyak ceritaa yang bagusss.. ak ikhlas kalau kamu hidup bahagiaa walaupun tida kenal ak naddd.. you deserve a lot of happines naddd.. semogaa semuaa yanh kamu alami ini bisa menjadi berkah buat kamu yaaa.. semogaa sama allah di balas dengan kesuksesan aamiin, semogas bisa lolos ke undip dengan lancarrr aamiin dan semogaa doa doamu lebih mudah di kabulkan yaaa.. aamiin \n\n okayydee segini dulu yaa gamenyaa dann longteksnyaaa ak udaa ngantuk soalnyaa wkwkwk.. semogss ksmu sukaa yaaa denyan semuss inii, selamatt istirahatt yaa sayangg, selamat beristirahat di dunia yang se chaos iniii.. semogaa besokk menjadi hsri yang lancarr yaa buat kamuuu aamiin.. okeydee walaupun kita ga bertemu di sekolahann, semogaa kitaa bisa bertemuu untuk bermainn yaaa.. aamiin aamiin yaallah, okayydee goodnightt sayangg, keep strongg yaaaa.. aku tau kamu sekuat itu kokk.. alhamdulillah bisaa nangiss hari inii, semogaa besok tumbuh lebih kuat lagi yaaaa.. okaydeee paipaipaipaii cantikkk.. assalamualaikumm.. je t'aimeee biennn ssayanggg🩵💙💙🩵🩵💙🩵💙🩵💙🩵💙🩵💙🩵💙🩵💙`;
+
+        // --- GAME VARIABLES ---
+        let canvas, ctx, width, height;
+        let dots = [];
+        let currentDot = 0;
+        let isDragging = false;
+        let touchX, touchY;
+        let currentLevel = 0; // 0 = Star, 1 = Infinity, 2 = Heart
+        let isLevelComplete = false;
+        let audioCtx = null;
+
+        // Warna tema per level
+        const LEVEL_THEMES = [
+            { color: '#ffd700', name: "NADINE STARKIRA", shape: "Star" },     // Gold
+            { color: '#00f5d4', name: "THE INFINITY", shape: "Infinity" },  // Cyan
+            { color: '#ff007f', name: "THE LOVE", shape: "Heart" }      // Pink
+        ];
+
+        // --- AUDIO ENGINE ---
+        function initAudio() {
+            if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+
+        function playTone(freq, type, dur) {
+            if(!audioCtx) return;
+            const o = audioCtx.createOscillator();
+            const g = audioCtx.createGain();
+            o.type = type; o.frequency.value = freq;
+            o.connect(g); g.connect(audioCtx.destination);
+            o.start(); g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
+            o.stop(audioCtx.currentTime + dur);
+        }
+
+        // --- CORE FUNCTIONS ---
+        function startGame() {
+            initAudio();
+            document.getElementById('screen-start').classList.add('hidden');
+            document.getElementById('screen-game').classList.remove('hidden');
+            setupCanvas();
+            loadLevel(0);
+            requestAnimationFrame(loop);
+        }
+
+        function setupCanvas() {
+            const container = document.querySelector('.game-console');
+            canvas = document.getElementById('gameCanvas');
+            ctx = canvas.getContext('2d');
+            width = container.clientWidth;
+            height = container.clientHeight;
+            canvas.width = width;
+            canvas.height = height;
+
+            // Events
+            canvas.addEventListener('touchstart', onStart, {passive:false});
+            canvas.addEventListener('touchmove', onMove, {passive:false});
+            canvas.addEventListener('touchend', onEnd);
+            canvas.addEventListener('mousedown', onStart);
+            canvas.addEventListener('mousemove', onMove);
+            canvas.addEventListener('mouseup', onEnd);
+        }
+
+        function loadLevel(lvlIdx) {
+            currentLevel = lvlIdx;
+            isLevelComplete = false;
+            currentDot = 0;
+            document.getElementById('target-counter').textContent = "1";
+            document.getElementById('level-indicator').textContent = `LVL ${lvlIdx + 1}: ${LEVEL_THEMES[lvlIdx].name}`;
+            document.getElementById('level-indicator').style.color = LEVEL_THEMES[lvlIdx].color;
+
+            generateDots(lvlIdx);
+        }
+
+        function generateDots(level) {
+            dots = [];
+            const cx = width / 2;
+            const cy = height / 2;
+            const scale = Math.min(width, height) / 3;
+
+            // FORMULA MATEMATIKA UNTUK SHAPE
+            if (level === 0) { 
+                // --- STAR (Bintang) ---
+                const points = 5; 
+                const outerR = scale * 0.8;
+                const innerR = scale * 0.4;
+                for(let i=0; i<points*2; i++) {
+                    const r = (i % 2 === 0) ? outerR : innerR;
+                    const t = (Math.PI * i) / points - Math.PI/2;
+                    dots.push({
+                        x: cx + Math.cos(t) * r,
+                        y: cy + Math.sin(t) * r,
+                        connected: false
+                    });
+                }
+            } 
+            else if (level === 1) {
+                // --- INFINITY (Lemniscate) ---
+                const total = 20;
+                for(let i=0; i<total; i++) {
+                    let t = (2 * Math.PI * i) / total;
+                    let denom = 1 + Math.sin(t)*Math.sin(t);
+                    let x = (scale * 1.2 * Math.cos(t)) / denom;
+                    let y = (scale * 1.2 * Math.sin(t) * Math.cos(t)) / denom;
+                    dots.push({ x: cx + x, y: cy - y, connected: false }); // y inverted
+                }
+            } 
+            else if (level === 2) {
+                // --- HEART (Hati) ---
+                const total = 24;
+                for(let i=0; i<total; i++) {
+                    let t = (2 * Math.PI * i) / total; 
+                    // Cardioid formula
+                    let x = 16 * Math.pow(Math.sin(t), 3);
+                    let y = -(13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t));
+                    
+                    dots.push({
+                        x: cx + (x * (scale/18)),
+                        y: cy + (y * (scale/18)) - 20,
+                        connected: false
+                    });
+                }
+            }
+            dots[0].connected = true; // Titik awal selalu aktif
+        }
+
+        // --- INPUT LOGIC ---
+        function onStart(e) { e.preventDefault(); isDragging = true; updatePos(e); checkConnect(); }
+        function onMove(e) { e.preventDefault(); if(isDragging) { updatePos(e); checkConnect(); } }
+        function onEnd() { isDragging = false; }
+
+        function updatePos(e) {
+            const rect = canvas.getBoundingClientRect();
+            const cx = e.touches ? e.touches[0].clientX : e.clientX;
+            const cy = e.touches ? e.touches[0].clientY : e.clientY;
+            touchX = cx - rect.left;
+            touchY = cy - rect.top;
+        }
+
+        function checkConnect() {
+            if(isLevelComplete) return;
+
+            // Logic: Connect currentDot to currentDot+1
+            // Except for last dot closing the loop
+            let nextIdx = (currentDot + 1) % dots.length;
+            let target = dots[nextIdx];
+            
+            let dist = Math.hypot(touchX - target.x, touchY - target.y);
+            
+            if (dist < 30) {
+                currentDot++;
+                if (currentDot < dots.length) dots[currentDot].connected = true;
+                
+                // Sound Effect
+                let freq = 300 + (currentDot * 30);
+                playTone(freq, 'sine', 0.1);
+                
+                document.getElementById('target-counter').textContent = currentDot + 1;
+
+                // Cek Win Level
+                if (currentDot >= dots.length) { // Loop closed
+                   handleLevelComplete();
+                }
+            }
+        }
+
+        function handleLevelComplete() {
+            isLevelComplete = true;
+            isDragging = false;
+            
+            // Victory Sound
+            playTone(600, 'square', 0.1);
+            setTimeout(() => playTone(800, 'square', 0.2), 150);
+
+            setTimeout(() => {
+                if (currentLevel < 2) {
+                    // Show Popup Level Next
+                    const overlay = document.getElementById('msg-overlay');
+                    const titles = ["NADINE STSRKIRA", "THE INFINITY"];
+                    const descs = ["Bintang ini layaknya Nadine yang akan bersinar, menerangi pengkhianat", "kamu pernah bilang kan sayangnya kamu ke fathan infinityy"];
+                    
+                    document.getElementById('msg-title').textContent = titles[currentLevel];
+                    document.getElementById('msg-desc').textContent = descs[currentLevel];
+                    overlay.classList.add('show');
+                } else {
+                    // Final Win
+                    document.getElementById('screen-game').classList.add('hidden');
+                    document.getElementById('screen-win').classList.remove('hidden');
+                    typeWriter();
+                }
+            }, 1000);
+        }
+
+        function nextLevel() {
+            document.getElementById('msg-overlay').classList.remove('show');
+            loadLevel(currentLevel + 1);
+        }
+
+        // --- DRAWING LOOP ---
+        function loop() {
+            ctx.clearRect(0, 0, width, height);
+            
+            const themeColor = LEVEL_THEMES[currentLevel].color;
+
+            // 1. Draw Lines
+            ctx.beginPath();
+            ctx.strokeStyle = themeColor;
+            ctx.lineWidth = 4;
+            ctx.lineCap = "round";
+            ctx.lineJoin = "round";
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = themeColor;
+
+            if (dots.length > 0) {
+                ctx.moveTo(dots[0].x, dots[0].y);
+                // Draw connected path
+                let limit = Math.min(currentDot, dots.length - 1);
+                for(let i=1; i<=limit; i++) {
+                    ctx.lineTo(dots[i].x, dots[i].y);
+                }
+                // Close loop logic
+                if (currentDot >= dots.length) {
+                    ctx.lineTo(dots[0].x, dots[0].y);
+                    ctx.fillStyle = themeColor + "33"; // Transparent fill
+                    ctx.fill();
+                }
+            }
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+
+            // 2. Drag Line
+            if (isDragging && !isLevelComplete && dots.length > 0) {
+                let startDot = dots[currentDot % dots.length];
+                ctx.beginPath();
+                ctx.moveTo(startDot.x, startDot.y);
+                ctx.lineTo(touchX, touchY);
+                ctx.strokeStyle = "rgba(255,255,255,0.5)";
+                ctx.setLineDash([5,5]);
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+
+            // 3. Draw Dots
+            dots.forEach((p, i) => {
+                let isTarget = (i === (currentDot + 1) % dots.length) && !isLevelComplete;
+                if (currentDot >= dots.length && i===0) isTarget = false; // Stop highlight at end
+
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 6, 0, Math.PI*2);
+                
+                if (i <= currentDot || (isLevelComplete && i===0)) {
+                    // Connected
+                    ctx.fillStyle = themeColor;
+                } else if (isTarget) {
+                    // Target (Blinking)
+                    let pulse = Math.sin(Date.now() / 100) * 3;
+                    ctx.arc(p.x, p.y, 6 + pulse, 0, Math.PI*2);
+                    ctx.fillStyle = "#fff";
+                } else {
+                    // Not yet
+                    ctx.fillStyle = "#333";
+                }
+                ctx.fill();
+
+                // Numbers
+                if(!isLevelComplete) {
+                    ctx.fillStyle = "#aaa";
+                    ctx.font = "8px monospace";
+                    ctx.fillText(i+1, p.x+10, p.y-10);
+                }
+            });
+
+            requestAnimationFrame(loop);
+        }
+
+        function typeWriter() {
+            const el = document.getElementById('typewriter');
+            el.textContent = "";
+            let i = 0;
+            function type() {
+                if(i < finalMessage.length) {
+                    el.textContent += finalMessage.charAt(i);
+                    i++;
+                    el.scrollTop = el.scrollHeight;
+                    setTimeout(type, 50);
+                }
+            }
+            type();
+        }
+    </script>
+</body>
+</html>
